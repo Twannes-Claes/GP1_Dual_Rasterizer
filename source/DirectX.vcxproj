@@ -80,6 +80,7 @@
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="ColorRGB.h" />
+    <ClInclude Include="DataTypes.h" />
     <ClInclude Include="Effect.h" />
     <ClInclude Include="EffectShaded.h" />
     <ClInclude Include="EffectTransparent.h" />

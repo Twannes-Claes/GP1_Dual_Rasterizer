@@ -28,11 +28,11 @@ SamplerState gSampler : Sampler
 	AddressV = Wrap; //or Mirror, Clamp, Border
 };
 
-RasterizerState gRasterizerState
-{
-	CullMode = none;
-	FrontCounterClockWise = false; //default
-};
+RasterizerState gRasterizerState;
+//{
+//	CullMode = none;
+//	FrontCounterClockWise = false; //default
+//};
 
 BlendState gBlendState
 {
@@ -103,21 +103,20 @@ float3 PixelShading(VS_OUTPUT input)
 	sampledNormal = colorNormal.rgb;
 
 	sampledNormal = (2 * sampledNormal) - float3(1.f, 1.f, 1.f);
-	sampledNormal = mul(sampledNormal, tangentSpaceAxis);
+	sampledNormal = normalize(mul(sampledNormal, tangentSpaceAxis));
 
 	//calculate the observedArea
 	const float observedArea = saturate(dot(sampledNormal, -gLightDirection));
 
 	//calculate the diffuse color
 	float4 diffuseColor = gDiffuseMap.Sample(gSampler, input.UV);
-	diffuseColor = (diffuseColor * gKD / gPI) * gLightIntensity;
+	diffuseColor = (diffuseColor * gKD / gPI);
 
-	//calculate the specular color
 	//calculate the viewDirection
 	const float3 viewDirection = normalize(input.WorldPosition.xyz - gInverseViewMatrix[3].xyz);
 
 	//calculations for the specular color
-	const float3 reflectVector = reflect(gLightDirection, sampledNormal);
+	const float3 reflectVector = normalize(reflect(gLightDirection, sampledNormal));
 	const float reflectAngle = saturate(dot(reflectVector, -viewDirection));
 
 	const float4 glossColor = gGlossinessMap.Sample(gSampler, input.UV);
@@ -126,9 +125,10 @@ float3 PixelShading(VS_OUTPUT input)
 	const float phongValue = pow(reflectAngle, exponent);
 
 	//fill in the specular color
-	const float4 specularColor = gSpecularMap.Sample(gSampler, input.UV) * phongValue;
+	const float4 specularColor = gSpecularMap.Sample(gSampler, input.UV) * (phongValue/** 2.5f*/);
 
-	const float3 finalColor = (diffuseColor.rgb * observedArea) + specularColor.rgb;
+	const float3 finalColor = (gLightIntensity * diffuseColor + specularColor) * observedArea;
+	//const float3 finalColor = specularColor * observedArea;
 
 	//return the final color with the ambient color
 	return finalColor + gAmbientColor;

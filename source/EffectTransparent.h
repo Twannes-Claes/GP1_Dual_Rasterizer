@@ -15,9 +15,14 @@ namespace dae
 
 		private:
 
-		virtual void SetNormalMap(const Texture* pTexture) const override{};;
-		virtual void SetSpecularMap(const Texture* pTexture) const override{};
-		virtual void SetGlossinessMap(const Texture* pTexture) const override{};
+		virtual void SetNormalMap(const Texture* pTexture) const override{}
+		virtual void SetSpecularMap(const Texture* pTexture) const override{}
+		virtual void SetGlossinessMap(const Texture* pTexture) const override{}
+
+		EffectTransparent(const EffectTransparent&) = delete;
+		EffectTransparent(EffectTransparent&&) noexcept = delete;
+		EffectTransparent& operator=(const EffectTransparent&) = delete;
+		EffectTransparent& operator=(EffectTransparent&&) noexcept = delete;
 
 	};
 

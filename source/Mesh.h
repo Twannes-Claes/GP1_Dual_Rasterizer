@@ -2,28 +2,19 @@
 #include "Vector3.h"
 //#include "ColorRGB.h"
 #include "Effect.h"
+#include "DataTypes.h"
 
 
 
 namespace dae
 {
-	//class Effect;
 	class Texture;
-	class Mesh;
-
-	struct Vertex
-	{
-		Vector3 position;
-		Vector3 normal;
-		Vector3 tangent;
-		Vector2 uv;
-	};
 
 	class Mesh final
 	{
 	public:
 
-		Mesh(ID3D11Device* pDevice, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, const EffectType typeEffect);
+		Mesh(ID3D11Device* pDevice, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, const EffectType typeEffect);
 		~Mesh();
 
 		Mesh(const Mesh&) = delete;
@@ -31,7 +22,7 @@ namespace dae
 		Mesh& operator=(const Mesh&) = delete;
 		Mesh& operator=(Mesh&&) noexcept = delete;
 
-		void Render(ID3D11DeviceContext* pDeviceContext) const;
+		void RenderHardware(ID3D11DeviceContext* pDeviceContext) const;
 
 		void SetProjectionMatrix(const Matrix& matrix) const
 		{
@@ -63,6 +54,8 @@ namespace dae
 			m_pEffect->SetWorldMatrix(m_WorldMatrix);
 		}
 
+		Matrix& GetWorldMatrix() { return m_WorldMatrix; }
+
 		void SetInvViewMatrix(const Matrix& invViewMatrix) const
 		{
 			m_pEffect->SetInvViewMatrix(invViewMatrix);
@@ -73,23 +66,39 @@ namespace dae
 			m_pEffect->ToggleSamplerState(pDevice);
 		}
 
+		void ToggleCullMode(ID3D11Device* pDevice) const
+		{
+			m_pEffect->ToggleCullMode(pDevice);
+		}
+
 		void SetRotationY(const float angle)
 		{
 			m_WorldMatrix = m_WorldMatrix * Matrix::CreateRotationY(angle) ;
 		}
 
+		std::vector<Vertex>& GetVertices() { return m_Vertices; }
+		std::vector<uint32_t>& GetIndices() { return m_Indices; }
+
+		PrimitiveTopology GetPrimitiveTopology() const { return m_PrimitiveTopology; }
+
 	private:
 
 		Effect* m_pEffect{};
+
 		ID3DX11EffectTechnique* m_pTechnique{};
 
 		ID3D11Buffer* m_pVertexBuffer{};
 		ID3D11InputLayout* m_pInputLayout{};
 		ID3D11Buffer* m_pIndexBuffer{};
 
+		std::vector<Vertex> m_Vertices{};
+		std::vector<uint32_t> m_Indices{};
+
 		uint32_t m_NumIndices{};
 
 		Matrix m_WorldMatrix{};
+
+		PrimitiveTopology m_PrimitiveTopology{ PrimitiveTopology::TriangleList };
 
 	};
 }

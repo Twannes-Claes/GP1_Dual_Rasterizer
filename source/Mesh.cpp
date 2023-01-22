@@ -6,21 +6,27 @@
 
 namespace dae
 {
-	Mesh::Mesh(ID3D11Device* pDevice, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, const EffectType typeEffect)
+	Mesh::Mesh(ID3D11Device* pDevice, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, const EffectType typeEffect)
+		:m_Vertices{std::move(vertices)},
+		 m_Indices{std::move(indices)}
 	{
 
 		switch (typeEffect)
 		{
 			case EffectType::shaded:
-				m_pEffect = new EffectShaded( pDevice, L"./Resources/PosTex3D.fx" );
+				m_pEffect = new EffectShaded( pDevice, L"./Resources/Vehicle.fx" );
 				break;
 			case EffectType::transparent:
-				m_pEffect = new EffectTransparent( pDevice, L"./Resources/PosTransparent3D.fx" );
+				m_pEffect = new EffectTransparent( pDevice, L"./Resources/Fire.fx" );
 				break;
+
 		}
 
 		//Get Technique from Effect
-		m_pTechnique = m_pEffect->GetTechnique();
+		if(m_pEffect != nullptr)
+		{
+			m_pTechnique = m_pEffect->GetTechnique();
+		}
 
 		//Create Vertex Layout
 		static constexpr uint32_t numElements{ 4 };
@@ -65,26 +71,26 @@ namespace dae
 		//Create vertex buffer
 		D3D11_BUFFER_DESC bd{};
 		bd.Usage = D3D11_USAGE_IMMUTABLE;
-		bd.ByteWidth = sizeof(Vertex) * static_cast<uint32_t>(vertices.size());
+		bd.ByteWidth = sizeof(Vertex) * static_cast<uint32_t>(m_Vertices.size());
 		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		bd.CPUAccessFlags = 0;
 		bd.MiscFlags = 0;
 
 		D3D11_SUBRESOURCE_DATA initData{};
-		initData.pSysMem = vertices.data();
+		initData.pSysMem = m_Vertices.data();
 
 		result = pDevice->CreateBuffer(&bd, &initData, &m_pVertexBuffer);
 
 		if (FAILED(result)) return;
 
 		//Create index buffer
-		m_NumIndices = static_cast<uint32_t>(indices.size());
+		m_NumIndices = static_cast<uint32_t>(m_Indices.size());
 		bd.Usage = D3D11_USAGE_IMMUTABLE;
 		bd.ByteWidth = sizeof(uint32_t) * m_NumIndices;
 		bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
 		bd.CPUAccessFlags = 0;
 		bd.MiscFlags = 0;
-		initData.pSysMem = indices.data();
+		initData.pSysMem = m_Indices.data();
 
 		result = pDevice->CreateBuffer(&bd, &initData, &m_pIndexBuffer);
 
@@ -103,7 +109,7 @@ namespace dae
 
 		delete m_pEffect;
 	}
-	void Mesh::Render(ID3D11DeviceContext* pDeviceContext) const
+	void Mesh::RenderHardware(ID3D11DeviceContext* pDeviceContext) const
 	{
 		//1. Set Primitive Topology
 		pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

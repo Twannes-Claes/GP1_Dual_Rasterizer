@@ -12,6 +12,7 @@ namespace dae {
 	const Vector3 Vector3::UnitY = Vector3{ 0, 1, 0 };
 	const Vector3 Vector3::UnitZ = Vector3{ 0, 0, 1 };
 	const Vector3 Vector3::Zero = Vector3{ 0, 0, 0 };
+	const Vector3 Vector3::Identity = Vector3{1,1,1};
 
 	Vector3::Vector3(float _x, float _y, float _z) : x(_x), y(_y), z(_z){}
 
@@ -48,6 +49,11 @@ namespace dae {
 	float Vector3::Dot(const Vector3& v1, const Vector3& v2)
 	{
 		return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+	}
+
+	float Vector3::ClampDot(const Vector3& v1, const Vector3& v2)
+	{
+		return std::max(0.f, Dot(v1, v2));
 	}
 
 	Vector3 Vector3::Cross(const Vector3& v1, const Vector3& v2)

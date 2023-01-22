@@ -99,7 +99,7 @@ namespace dae
 
 						vertices.push_back(vertex);
 						tempIndices[iFace] = static_cast<uint32_t>(vertices.size()) - 1;
-						indices.push_back(static_cast<uint32_t>(vertices.size()) - 1);
+						//indices.push_back(static_cast<uint32_t>(vertices.size()) - 1);
 					}
 
 					indices.push_back(tempIndices[0]);

@@ -6,6 +6,7 @@
 
 #undef main
 #include "Renderer.h"
+#include  <conio.h>
 
 using namespace dae;
 
@@ -57,11 +58,38 @@ int main(int argc, char* args[])
 				break;
 			case SDL_KEYUP:
 
+				if (e.key.keysym.scancode == SDL_SCANCODE_RETURN)
+				{
+					std::cout << "\x1B[2J\x1B[H"; //jumps to next part of unwritten console
+					pRenderer->PrintInstructions();
+				}
+
 				if (e.key.keysym.scancode == SDL_SCANCODE_LCTRL) pRenderer->ToggleCameraLock();
 
-				if (e.key.keysym.scancode == SDL_SCANCODE_F2) pRenderer->ToggleSampleState();
+				if (e.key.keysym.scancode == SDL_SCANCODE_F1) pRenderer->ToggleBackgroundState();
+
+				if (e.key.keysym.scancode == SDL_SCANCODE_F2) pRenderer->ToggleRotation();
+
+				if (e.key.keysym.scancode == SDL_SCANCODE_F3) pRenderer->ToggleFireMesh();
+
+				if (e.key.keysym.scancode == SDL_SCANCODE_F4) pRenderer->ToggleSampleState();
+
+				if (e.key.keysym.scancode == SDL_SCANCODE_F5) pRenderer->ToggleSoftwareState();
+
+				if (e.key.keysym.scancode == SDL_SCANCODE_F6) pRenderer->ToggleNormal();
+
+				if (e.key.keysym.scancode == SDL_SCANCODE_F7) pRenderer->ToggleDepth();
+
+				if (e.key.keysym.scancode == SDL_SCANCODE_F8) pRenderer->ToggleBounding();
+
+				if (e.key.keysym.scancode == SDL_SCANCODE_F9) pRenderer->ToggleCullMode();
+
+				if (e.key.keysym.scancode == SDL_SCANCODE_F10) pRenderer->ToggleUniform();
+
+				if (e.key.keysym.scancode == SDL_SCANCODE_F11) pRenderer->TogglePrintingFPS();
 
 				break;
+
 			default: ;
 			}
 		}
@@ -73,13 +101,21 @@ int main(int argc, char* args[])
 		pRenderer->Render();
 
 		//--------- Timer ---------
+		
 		pTimer->Update();
-		printTimer += pTimer->GetElapsed();
-		if (printTimer >= 1.f)
+
+		if (pRenderer->CanPrintFPS())
 		{
-			printTimer = 0.f;
-			std::cout << "dFPS: " << pTimer->GetdFPS() << std::endl;
+			printTimer += pTimer->GetElapsed();
+
+			if (printTimer >= 1.f)
+			{
+				printTimer = 0.f;
+				std::cout << "\033[37m"; // TEXT COLOR
+				std::cout << "dFPS: " << pTimer->GetdFPS() << std::endl;
+			}
 		}
+		
 	}
 	pTimer->Stop();
 

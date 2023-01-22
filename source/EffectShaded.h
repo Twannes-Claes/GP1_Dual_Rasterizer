@@ -17,6 +17,11 @@ namespace dae
 			virtual void SetNormalMap(const Texture* pNormalMap) const override;
 			virtual void SetSpecularMap(const Texture* pSpecularMap) const override;
 
+			EffectShaded(const EffectShaded&) = delete;
+			EffectShaded(EffectShaded&&) noexcept = delete;
+			EffectShaded& operator=(const EffectShaded&) = delete;
+			EffectShaded& operator=(EffectShaded&&) noexcept = delete;
+
 		private:
 
 			ID3DX11EffectShaderResourceVariable* m_pGlossinessMapVariable;

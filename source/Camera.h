@@ -33,7 +33,7 @@ namespace dae
 		const float maxPitch{ 89.99f * TO_RADIANS };
 
 		const float speed{ 10 };
-		const float speedRot{ 50 * TO_RADIANS };
+		const float speedRot{ 0.5f * TO_RADIANS };
 
 		Matrix invViewMatrix{};
 		Matrix viewMatrix{};
@@ -94,7 +94,7 @@ namespace dae
 			const uint32_t mouseState = SDL_GetRelativeMouseState(&mouseX, &mouseY);
 
 			float moveSpeed{ deltaTime * speed };
-			const float rotSpeed{ deltaTime * speedRot };
+			const float rotSpeed{ /*deltaTime * */speedRot };
 
 			moveSpeed = (static_cast<float>(pKeyboardState[SDL_SCANCODE_LSHIFT]) * (sprintSpeedMultiplier) * moveSpeed) + moveSpeed;
 
@@ -116,7 +116,7 @@ namespace dae
 			const float fMouseX { static_cast<float>(mouseX) };
 
 			origin -= lmb * forward * moveSpeed * fMouseY;
-			origin -= lrmb * up * (moveSpeed / 3) * fMouseY;
+			origin -= lrmb * up * (speed / 3) * fMouseY;
 
 			totalPitch -= rmb * rotSpeed * fMouseY;
 			totalPitch = std::clamp(totalPitch, minPitch, maxPitch);

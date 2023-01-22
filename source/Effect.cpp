@@ -1,9 +1,12 @@
 #include "pch.h"
 #include "Effect.h"
+
+#include "Renderer.h"
 #include "Texture.h"
 
 namespace dae
 {
+	class Renderer;
 
 	dae::Effect::Effect(ID3D11Device* pDevice, const std::wstring& assetFile)
 		: m_pEffect{ LoadEffect(pDevice, assetFile) }
@@ -71,6 +74,13 @@ namespace dae
 			std::wcout << L"m_pEffectSamplerVariable not valid!\n";
 		}
 
+		m_pEffectRasterizerVariable = m_pEffect->GetVariableByName("gRasterizerState")->AsRasterizer();
+
+		if (!m_pEffectRasterizerVariable->IsValid())
+		{
+			std::wcout << L"m_pEffectRasterizerVariable not valid!\n";
+		}
+
 		m_SamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 		m_SamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 		m_SamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -81,13 +91,29 @@ namespace dae
 
 		m_SamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 		m_SamplerDesc.MaxAnisotropy = 16;
+		 
+		m_RasterizerDesc.FillMode = D3D11_FILL_SOLID;
+		m_RasterizerDesc.FrontCounterClockwise = false;
+		m_RasterizerDesc.DepthBias = 0;
+		m_RasterizerDesc.SlopeScaledDepthBias = 0.f;
+		m_RasterizerDesc.DepthBiasClamp = 0.f;
+		m_RasterizerDesc.DepthClipEnable = true;
+		m_RasterizerDesc.ScissorEnable = false;
+		m_RasterizerDesc.MultisampleEnable = false;
+		m_RasterizerDesc.AntialiasedLineEnable = false;
 
 		ToggleSamplerState(pDevice, false);
+
+		ToggleCullMode(pDevice, false);
 
 	}
 
 	Effect::~Effect()
 	{
+		if (m_pRasterizerState) m_pRasterizerState->Release();
+
+		if (m_pEffectRasterizerVariable) m_pEffectRasterizerVariable->Release();
+
 		if (m_pSamplerState) m_pSamplerState->Release();
 
 		if (m_pEffectSamplerVariable) m_pEffectSamplerVariable->Release();
