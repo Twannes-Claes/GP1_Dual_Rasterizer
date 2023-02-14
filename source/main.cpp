@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "Windows.h"
 
 #if defined(_DEBUG)
 #include "vld.h"
@@ -22,6 +23,16 @@ int main(int argc, char* args[])
 	(void)argc;
 	(void)args;
 
+	//code to let the color change work
+	DWORD consoleMode;
+
+	const HANDLE outputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	if (GetConsoleMode(outputHandle, &consoleMode))
+	{
+		SetConsoleMode(outputHandle, consoleMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+	}
+
 	//Create window + surfaces
 	SDL_Init(SDL_INIT_VIDEO);
 
@@ -29,7 +40,7 @@ int main(int argc, char* args[])
 	constexpr uint32_t height = 480;
 
 	SDL_Window* pWindow = SDL_CreateWindow(
-		"DirectX - Twannes_Claes/2DAE15",
+		"Dual Rasterizer - **Twannes Claes(2DAE15)",
 		SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
 		width, height, 0);
@@ -57,6 +68,9 @@ int main(int argc, char* args[])
 				isLooping = false;
 				break;
 			case SDL_KEYUP:
+
+
+				//logic for switching bools and enums
 
 				if (e.key.keysym.scancode == SDL_SCANCODE_RETURN)
 				{
@@ -104,6 +118,7 @@ int main(int argc, char* args[])
 		
 		pTimer->Update();
 
+		//if able to print -> print
 		if (pRenderer->CanPrintFPS())
 		{
 			printTimer += pTimer->GetElapsed();
@@ -111,7 +126,7 @@ int main(int argc, char* args[])
 			if (printTimer >= 1.f)
 			{
 				printTimer = 0.f;
-				std::cout << "\033[37m"; // TEXT COLOR
+				std::cout << "\033[37m"; //print fps in white
 				std::cout << "dFPS: " << pTimer->GetdFPS() << std::endl;
 			}
 		}

@@ -27,13 +27,6 @@ namespace dae
 		void Update(const Timer* pTimer) const;
 		void Render();
 
-		enum class CullMode
-		{
-			front,
-			back,
-			none
-		};
-
 		void PrintInstructions() const
 		{
 			// Show keybinds
@@ -76,6 +69,7 @@ namespace dae
 				std::cout << "OFF\n";
 			}
 		}
+
 		void ToggleRotate()
 		{
 			m_IsRotating = !m_IsRotating;
@@ -91,6 +85,7 @@ namespace dae
 				std::cout << "OFF\n";
 			}
 		}
+
 		void ToggleNormal()
 		{
 			m_ShowNormal = !m_ShowNormal;
@@ -106,6 +101,7 @@ namespace dae
 				std::cout << "OFF\n";
 			}
 		}
+
 		void ToggleBounding()
 		{
 			m_ShowBoundingBoxes = !m_ShowBoundingBoxes;
@@ -276,7 +272,9 @@ namespace dae
 
 		bool m_CanPrint{ false };
 
-		void LoadMesh();
+		bool m_IsUniform{ false };
+
+		void InitializeMesh();
 
 		//DIRECTX
 		HRESULT InitializeDirectX();
@@ -286,6 +284,7 @@ namespace dae
 
 		std::unique_ptr<Camera> m_pCamera{};
 
+		//resources
 		ID3D11Device* m_pDevice{};
 		ID3D11DeviceContext* m_pDeviceContext{};
 		IDXGISwapChain* m_pSwapChain{};
@@ -294,30 +293,35 @@ namespace dae
 		ID3D11Resource* m_pRenderTargetBuffer{};
 		ID3D11RenderTargetView* m_pRenderTargetView{};
 
-		//color switching logic
 		enum class RasterizerState
 		{
 			hardware,
 			software,
 			uniform
 		};
-		
+
+		enum class CullMode
+		{
+			front,
+			back,
+			none
+		};
 
 		CullMode m_CurrentCullMode{ CullMode::back };
 
 		static constexpr int m_CullmodeSize{ static_cast<int>(CullMode::none) + 1 };
 
-		bool m_IsUniform{ false };
 
 		RasterizerState m_CurrentRasterizerState{ RasterizerState::hardware };
 
 		static constexpr int m_RasterizerStateSize{ static_cast<int>(RasterizerState::uniform) + 1 };
 
-		const ColorRGB m_Colors[m_RasterizerStateSize]{  { 0.39f, 0.59f, .93f } , { 0.39f, 0.39f, .39f }, { 0.1f, 0.1f, .1f } };
+
+		const ColorRGB m_ColorsState[m_RasterizerStateSize]{  { 0.39f, 0.59f, .93f } , { 0.39f, 0.39f, .39f }, { 0.1f, 0.1f, .1f } };
 
 #pragma region software_code
 
-
+		//buffers for software
 		SDL_Surface* m_pFrontBuffer{ nullptr };
 		SDL_Surface* m_pBackBuffer{ nullptr };
 		uint32_t* m_pBackBufferPixels{};
@@ -326,11 +330,13 @@ namespace dae
 
 		int m_NrOfPixels;
 
+		//textures
 		Texture* m_pDiffuseTexture{};
 		Texture* m_pNormalTexture{};
 		Texture* m_pSpecularTexture{};
 		Texture* m_pGlossTexture{};
 
+		//light data
 		const Vector3 m_LightDir{ 0.577f, -0.577f , 0.577f };
 		const float m_LightIntensity{ 7.f };
 
@@ -341,14 +347,32 @@ namespace dae
 
 		float m_AspectRatio;
 
+
 		bool m_ShowBoundingBoxes{ false };
 
 		bool m_ShowDepthBuffer{ false };
+
 		bool m_ShowNormal{ true };
+
 
 		const float m_BoundingMargin{ 1.f };
 
-		//Function that transforms the vertices from the mesh from World space to Screen space
+		std::vector<Vector2> m_Vertices_ScreenSpace{};
+
+		std::vector<Vertex_Out> m_Vertices_Out{};
+
+		enum class SoftwareModes
+		{
+			Combined,
+			ObservedArea,
+			Diffuse,
+			Specular
+		};
+
+		SoftwareModes m_CurrentSoftwareMode{ SoftwareModes::Combined };
+
+		static constexpr int m_SoftwareModeSize{ static_cast<int>(SoftwareModes::Specular) + 1 };
+
 
 		bool CheckValidCullCrosses(const float edge01, const float edge02, const float edge03) const;
 
@@ -374,11 +398,11 @@ namespace dae
 		{
 			if(m_IsUniform)
 			{
-				SDL_FillRect(m_pBackBuffer, nullptr, SDL_MapRGB(m_pBackBuffer->format, static_cast<Uint8>(m_Colors[static_cast<int>(RasterizerState::uniform)].r * 255), static_cast<Uint8>(m_Colors[static_cast<int>(RasterizerState::uniform)].g * 255), static_cast<Uint8>(m_Colors[static_cast<int>(RasterizerState::uniform)].b * 255)));
+				SDL_FillRect(m_pBackBuffer, nullptr, SDL_MapRGB(m_pBackBuffer->format, static_cast<Uint8>(m_ColorsState[static_cast<int>(RasterizerState::uniform)].r * 255), static_cast<Uint8>(m_ColorsState[static_cast<int>(RasterizerState::uniform)].g * 255), static_cast<Uint8>(m_ColorsState[static_cast<int>(RasterizerState::uniform)].b * 255)));
 				return;
 			}
 
-			SDL_FillRect(m_pBackBuffer, nullptr, SDL_MapRGB(m_pBackBuffer->format, static_cast<Uint8>(m_Colors[static_cast<int>(RasterizerState::software)].r * 255), static_cast<Uint8>(m_Colors[static_cast<int>(RasterizerState::software)].g * 255), static_cast<Uint8>(m_Colors[static_cast<int>(RasterizerState::software)].b * 255)));
+			SDL_FillRect(m_pBackBuffer, nullptr, SDL_MapRGB(m_pBackBuffer->format, static_cast<Uint8>(m_ColorsState[static_cast<int>(RasterizerState::software)].r * 255), static_cast<Uint8>(m_ColorsState[static_cast<int>(RasterizerState::software)].g * 255), static_cast<Uint8>(m_ColorsState[static_cast<int>(RasterizerState::software)].b * 255)));
 		}
 
 		void constexpr ClearDepthBuffer() const
@@ -388,21 +412,6 @@ namespace dae
 
 		bool IsOutOfFrustrum(const Vertex_Out& vOut) const;
 
-		std::vector<Vector2> m_Vertices_ScreenSpace{};
-
-		std::vector<Vertex_Out> m_Vertices_Out{};
-
-		enum class SoftwareModes
-		{
-			Combined,
-			ObservedArea,
-			Diffuse,
-			Specular
-		};
-
-		SoftwareModes m_CurrentSoftwareMode{ SoftwareModes::Combined };
-
-		static constexpr int m_SoftwareModeSize{ static_cast<int>(SoftwareModes::Specular) + 1 };
 
 #pragma endregion
 

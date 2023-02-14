@@ -101,6 +101,7 @@ namespace dae
 				//	break;
 			}
 
+			//release sampler state and initialize it with the new one
 			if (m_pSamplerState) m_pSamplerState->Release();
 
 			if (const HRESULT result{ pDevice->CreateSamplerState(&m_SamplerDesc, &m_pSamplerState) }; FAILED(result)) return;
@@ -141,6 +142,7 @@ namespace dae
 					break;
 				}
 
+				//release rasterizer state and initialize it with the new one
 				if (m_pRasterizerState) m_pRasterizerState->Release();
 
 				if (const HRESULT result{ pDevice->CreateRasterizerState(&m_RasterizerDesc, &m_pRasterizerState) }; FAILED(result)) return;
@@ -155,6 +157,7 @@ namespace dae
 			CullModes m_CurrentCullmode{ CullModes::back };
 
 			ID3DX11Effect* m_pEffect{};
+
 			ID3DX11EffectTechnique* m_pTechnique{};
 
 			ID3DX11EffectMatrixVariable* m_pMatWorldViewProjVariable{};

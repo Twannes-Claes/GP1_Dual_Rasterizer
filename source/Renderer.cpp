@@ -26,6 +26,7 @@ namespace dae {
 			std::cout << "DirectX initialization failed!\n";
 		}
 
+		//create buffers
 		m_pFrontBuffer = SDL_GetWindowSurface(pWindow);
 		m_pBackBuffer = SDL_CreateRGBSurface(0, m_Width, m_Height, 32, 0, 0, 0, 0);
 		m_pBackBufferPixels = static_cast<uint32_t*>(m_pBackBuffer->pixels);
@@ -36,23 +37,24 @@ namespace dae {
 
 		m_AspectRatio = static_cast<float>(m_Width) / static_cast<float>(m_Height);
 
+
 		m_pCamera = std::make_unique<Camera>();
 
 		m_pCamera->Initialize(m_AspectRatio, 45, Vector3{ 0, 0, -50 });
 
-		SDL_SetRelativeMouseMode(static_cast<SDL_bool>(m_IsCamLocked));
 
-		LoadMesh();
+		InitializeMesh();
 
-		std::cout << "\x1B[2J\x1B[H";
+		std::cout << "\x1B[2J\x1B[H";//clear console
 
 		PrintInstructions();
 
+		SDL_SetRelativeMouseMode(static_cast<SDL_bool>(m_IsCamLocked));
 	}
 
 	Renderer::~Renderer()
 	{
-
+		//release resources
 		if (m_pRenderTargetView) m_pRenderTargetView->Release();
 		if (m_pRenderTargetBuffer) m_pRenderTargetBuffer->Release();
 		if (m_pDepthStencilView) m_pDepthStencilView->Release();
@@ -66,6 +68,7 @@ namespace dae {
 		}
 		if (m_pDevice) m_pDevice->Release();
 
+		//delette buffer and textures
 		delete[] m_pDepthBufferPixels;
 
 		delete m_pDiffuseTexture;
@@ -76,17 +79,20 @@ namespace dae {
 
 	void Renderer::Update(const Timer* pTimer) const
 	{
-
+		//update camera
 		m_pCamera->Update(pTimer);
 
+		//update mesh matrices
 		m_pMesh->SetProjectionMatrix(m_pCamera->viewMatrix * m_pCamera->projectionMatrix);
 		m_pMesh->SetWorldMatrix();
 		m_pMesh->SetInvViewMatrix(m_pCamera->invViewMatrix);
 
+		//update fire effect matrices
 		m_pFireMesh->SetProjectionMatrix(m_pCamera->viewMatrix * m_pCamera->projectionMatrix);
 		m_pFireMesh->SetWorldMatrix();
 		m_pFireMesh->SetInvViewMatrix(m_pCamera->invViewMatrix);
 
+		//if is able to rotate rotate matrices of both meshes
 		if(m_IsRotating)
 		{
 			m_pMesh->SetRotationY(m_RotationSpeed * pTimer->GetElapsed());
@@ -101,24 +107,25 @@ namespace dae {
 
 		if (!m_IsInitialized) return;
 
-		//1. Clear RTV & DSV
 
-		//2. Set Pipeline + Invoke DrawCalls (==Render)
+		
 
 		if(m_CurrentRasterizerState == RasterizerState::hardware)
 		{
 
+			//1. Clear RTV & DSV
 			if (m_IsUniform)
 			{
-				m_pDeviceContext->ClearRenderTargetView(m_pRenderTargetView, &m_Colors[static_cast<int>(RasterizerState::uniform)].r);
+				m_pDeviceContext->ClearRenderTargetView(m_pRenderTargetView, &m_ColorsState[static_cast<int>(RasterizerState::uniform)].r);
 			}
 			else
 			{
-				m_pDeviceContext->ClearRenderTargetView(m_pRenderTargetView, &m_Colors[static_cast<int>(m_CurrentRasterizerState)].r);
+				m_pDeviceContext->ClearRenderTargetView(m_pRenderTargetView, &m_ColorsState[static_cast<int>(m_CurrentRasterizerState)].r);
 			}
 
 			m_pDeviceContext->ClearDepthStencilView(m_pDepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0);
 
+			//2. Set Pipeline + Invoke DrawCalls (==Render)
 			m_pMesh->RenderHardware(m_pDeviceContext);
 
 			if (m_CanShowFire)
@@ -133,20 +140,21 @@ namespace dae {
 		if(m_CurrentRasterizerState == RasterizerState::software)
 		{
 
+			//reset the buffer and background
 			ClearDepthBuffer();
 			ClearBackGround();
 
-			//@START
 			//Lock BackBuffer
 			SDL_LockSurface(m_pBackBuffer);
-			
+
+			//convert vertices from mesh into ndc space and then convert to screenspace
 			VertexTransformationFunction();
 
 			switch (m_pMesh->GetPrimitiveTopology())
 			{
 			case PrimitiveTopology::TriangleList:
 			{
-
+				//for each triangle in the mesh
 				for (size_t vertexIndex{}; vertexIndex < m_pMesh->GetIndices().size(); vertexIndex += 3)
 				{
 					RenderTriangle(vertexIndex, false);
@@ -178,28 +186,36 @@ namespace dae {
 
 	void Renderer::RenderTriangle(const size_t& index, const bool swapVertices) const
 	{
+		//calculate the indexes of the vertices of the triangle
 		const size_t index0{ m_pMesh->GetIndices()[index] };
 		const size_t index1{ m_pMesh->GetIndices()[index + 1 + swapVertices] };
 		const size_t index2{ m_pMesh->GetIndices()[index + 1 + !swapVertices] };
 
+		//has same index twice return
 		if (index0 == index1 || index1 == index2 || index0 == index2) return;
 
+		//get the vertex of the indexes
 		const Vertex_Out vertex_OutV0{ m_Vertices_Out[index0] };
 		const Vertex_Out vertex_OutV1{ m_Vertices_Out[index1] };
 		const Vertex_Out vertex_OutV2{ m_Vertices_Out[index2] };
 
+		//if out of frustrum return
 		if (IsOutOfFrustrum(vertex_OutV0) || IsOutOfFrustrum(vertex_OutV1) || IsOutOfFrustrum(vertex_OutV2)) return;
 
+		//calc vertices
 		const Vector2 v0{ m_Vertices_ScreenSpace[index0] };
 		const Vector2 v1{ m_Vertices_ScreenSpace[index1] };
 		const Vector2 v2{ m_Vertices_ScreenSpace[index2] };
 
+		//calculate the edges of the triangle
 		const Vector2 edgeV0V1{ v1 - v0 };
 		const Vector2 edgeV1V2{ v2 - v1 };
 		const Vector2 edgeV2V0{ v0 - v2 };
 
+		//calc the inverse area of the triangle
 		const float invTriangleArea{ 1 / Vector2::Cross(edgeV0V1, edgeV1V2) };
 
+		//calc bounding box
 		AABB boundingBox
 		{
 			Vector2::Min(v0, Vector2::Min(v1, v2)),
@@ -209,6 +225,7 @@ namespace dae {
 		boundingBox.minAABB.Clamp(static_cast<float>(m_Width), static_cast<float>(m_Height));
 		boundingBox.maxAABB.Clamp(static_cast<float>(m_Width), static_cast<float>(m_Height));
 
+		// calc the start and end of of the pixels of the triangle
 		const int minX{ std::clamp(static_cast<int>(boundingBox.minAABB.x - m_BoundingMargin),0, m_Width) };
 		const int minY{ std::clamp(static_cast<int>(boundingBox.minAABB.y - m_BoundingMargin),0, m_Height) };
 
@@ -219,9 +236,10 @@ namespace dae {
 		{
 			for (int py{ minY }; py < maxY; ++py)
 			{
-
+				//calc index of the current pixel
 				const int pixelIndex{ px + py * m_Width };
 
+				//only render the pixels of the bounding box
 				if (m_ShowBoundingBoxes)
 				{
 					m_pBackBufferPixels[pixelIndex] = SDL_MapRGB(m_pBackBuffer->format,
@@ -230,53 +248,44 @@ namespace dae {
 						static_cast<uint8_t>(255));
 					continue;
 				}
-
+				//calc current pixel
 				const Vector2 point{ static_cast<float>(px), static_cast<float>(py) };
 
+				//calculate vector between point and the edges
 				const Vector2 pointToEdgeSide1{ point - v0 };
-
 				float edge0{ Vector2::Cross(edgeV0V1, pointToEdgeSide1) };
-
-				//if (m_CurrentCullMode == CullMode::back && edge0 < 0) return;
-				//if (m_CurrentCullMode == CullMode::front && edge0 > 0) return;
-				//if (edge0 < 0) continue;
 
 				const Vector2 pointToEdgeSide2{ point - v1 };
 				float edge1{ Vector2::Cross(edgeV1V2, pointToEdgeSide2) };
 
-				//if (m_CurrentCullMode == CullMode::back && edge1 < 0) return;
-				//if (m_CurrentCullMode == CullMode::front && edge1 > 0) return;
-				//if (edge1 < 0) continue;
-
 				const Vector2 pointToEdgeSide3{ point - v2 };
 				float edge2{ Vector2::Cross(edgeV2V0, pointToEdgeSide3) };
 
-				//if (m_CurrentCullMode == CullMode::back && edge2 < 0) return;
-				//if (m_CurrentCullMode == CullMode::front && edge2 > 0) return;
-				//if (edge2 < 0) continue;
-
+				//cullmode check
 				if (!CheckValidCullCrosses(edge0, edge1, edge2)) continue;
 
-
+				//calc barycentric weights
 				const float weightV0{ edge1 * invTriangleArea };
 				const float weightV1{ edge2 * invTriangleArea };
 				const float weightV2{ edge0 * invTriangleArea };
 
-
+				//calc barycentric depths
 				float invDepthV0{ CalculateDepth(vertex_OutV0, false) };
 				float invDepthV1{ CalculateDepth(vertex_OutV1, false) };
 				float invDepthV2{ CalculateDepth(vertex_OutV2, false) };
 
+				//calc z depth
 				const float interpolateDepthZ{ CalculateInterpolateDepth(weightV0, weightV1, weightV2, invDepthV0, invDepthV1, invDepthV2) };
 
-
+				//if current buffer is less than the z depth continue
 				if (m_pDepthBufferPixels[pixelIndex] < interpolateDepthZ) continue;
 
+				//save the new depth
 				m_pDepthBufferPixels[pixelIndex] = interpolateDepthZ;
-
 
 				ColorRGB finalColor{};
 
+				//remap z depth when showing depth and output the depth as color
 				if (m_ShowDepthBuffer)
 				{
 					const float colorDepth{ Remap(interpolateDepthZ, 0.997f, 1.0f) };
@@ -286,12 +295,14 @@ namespace dae {
 				{
 					Vertex_Out pixelInformation{};
 
+					//calculate w depth
 					invDepthV0 = CalculateDepth(vertex_OutV0, true);
 					invDepthV1 = CalculateDepth(vertex_OutV1, true);
 					invDepthV2 = CalculateDepth(vertex_OutV2, true);
 
 					const float interpolateDepthW{ CalculateInterpolateDepth(weightV0, weightV1, weightV2, invDepthV0, invDepthV1, invDepthV2) };
 
+					//calculate the uv of the current pixel
 					const Vector2 uvPixel
 					{
 							(CalcUVComponent(weightV0, invDepthV0, index0)
@@ -300,14 +311,19 @@ namespace dae {
 						* interpolateDepthW
 					};
 
+					//save it to the uv
 					pixelInformation.uv = uvPixel;
+
+					//calculate the rest of the pixelInformation
 
 					InterpolatePixelInfo(pixelInformation, vertex_OutV0, vertex_OutV1, vertex_OutV2, weightV0, weightV1, weightV2, interpolateDepthW);
 
+					//calculate shading of currennt pixel
 					PixelShading(pixelInformation, finalColor);
 
 				}
 
+				//show pixel to screen with given color
 				ConvertColorToPixel(finalColor, pixelIndex);
 
 			}
@@ -316,14 +332,17 @@ namespace dae {
 
 	void Renderer::PixelShading(const Vertex_Out& vOut, ColorRGB& finalColor) const
 	{
-
+		//store normal
 		Vector3 sampledNormal{ vOut.normal };
 
 		if (m_ShowNormal)
 		{
+			//calc binormal
 			const Vector3 binormal{ Vector3::Cross(vOut.normal, vOut.tangent) };
+			//create matrix out of tangent binormal and normal
 			const Matrix tangentSpaceAxis{ vOut.tangent, binormal.Normalized(), vOut.normal, Vector3::Zero };
 
+			//sample color of the uv of the texture and clamp it between -1 and 1
 			sampledNormal = m_pNormalTexture->SampleVector3(vOut.uv);
 			sampledNormal = 2 * sampledNormal - Vector3::Identity;
 
@@ -332,6 +351,7 @@ namespace dae {
 			sampledNormal.Normalize();
 		}
 
+		//calc observedArea
 		const float observedArea{ Vector3::ClampDot(sampledNormal, -m_LightDir) };
 
 		switch (m_CurrentSoftwareMode)
@@ -343,11 +363,13 @@ namespace dae {
 			break;
 			case SoftwareModes::Diffuse:
 			{
+					//calc lamber shader with  the observer area and lightintensity
 				finalColor = (m_pDiffuseTexture->Sample(vOut.uv) * m_KD / PI) * m_LightIntensity * observedArea;
 			}
 			break;
 			case SoftwareModes::Specular:
 			{
+				//calc calc color of the specular
 				const ColorRGB specularColor{ CalculateSpecular(sampledNormal, vOut) };
 
 				finalColor = specularColor * observedArea;
@@ -355,6 +377,7 @@ namespace dae {
 			break;
 			case SoftwareModes::Combined:
 			{
+				//sum them all up to combine them
 				const ColorRGB specularColor{ CalculateSpecular(sampledNormal, vOut) };
 
 				const ColorRGB diffuseColor{ (m_pDiffuseTexture->Sample(vOut.uv) * m_KD / PI) * m_LightIntensity };
@@ -394,38 +417,43 @@ namespace dae {
 
 	void Renderer::VertexTransformationFunction()
 	{
-
+		//clear the vertices
 		m_Vertices_ScreenSpace.clear();
 
 		m_Vertices_Out.clear();
 
-		//make member variable
+		//calc transform matrix of the mesh
 		const Matrix worldViewProjectionMatrix{ m_pMesh->GetWorldMatrix() * m_pCamera->viewMatrix * m_pCamera->projectionMatrix };
 
 		for (const Vertex& vertex : m_pMesh->GetVertices())
 		{
-
+			//calc viewDirection
 			Vector3 viewDirection{ m_pMesh->GetWorldMatrix().TransformPoint(vertex.position) - m_pCamera->origin };
 			viewDirection.Normalize();
 
+			//fill in vertex information
 			Vertex_Out temp
 			{
+				//transform vertex with the matrix
 				worldViewProjectionMatrix.TransformPoint({vertex.position, 1.f}),
+				//transform normal and tangent of the vertex
 				m_pMesh->GetWorldMatrix().TransformVector(vertex.normal).Normalized(),
 				m_pMesh->GetWorldMatrix().TransformVector(vertex.tangent).Normalized(),
 				vertex.uv,
 				vertex.color,
 				viewDirection
-				//worldViewProjectionMatrix.TransformPoint(vertex.viewDirection).Normalized()
 			};
-
+			//perspective divide
+			//divide position by w
 			temp.position.x /= temp.position.w;
 			temp.position.y /= temp.position.w;
 			temp.position.z /= temp.position.w;
 
+			//add to the vertices_out
 			m_Vertices_Out.emplace_back(temp);
 		}
 
+		//calc ndc to raster space
 		for (const Vertex_Out& vertice : m_Vertices_Out)
 		{
 			Vector2 v{
@@ -444,12 +472,14 @@ namespace dae {
 
 	ColorRGB Renderer::CalculateSpecular(const Vector3& sampledNormal, const Vertex_Out& v) const
 	{
+		//get direction of reflection
 		const Vector3 reflectDirection{ Vector3::Reflect(m_LightDir, sampledNormal) };
-	
+		//get angle of reflection
 		const float reflectionAngle{ Vector3::ClampDot(reflectDirection, -v.viewDirection) };
-	
+
+		//calc phong exponent
 		const float glossExponent{ m_pGlossTexture->Sample(v.uv).r * m_Shinyness };
-	
+		//calc phong value
 		const float phong{ powf(reflectionAngle, glossExponent) };
 	
 		return m_pSpecularTexture->Sample(v.uv) * phong;
@@ -510,7 +540,7 @@ namespace dae {
 		return (vOut.position.x < -1 || vOut.position.x > 1) || (vOut.position.y < -1 || vOut.position.y > 1) || (vOut.position.z < 0 || vOut.position.z > 1);
 	}
 
-	void Renderer::LoadMesh()
+	void Renderer::InitializeMesh()
 	{
 		//initialize mesh data & mesh
 

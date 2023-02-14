@@ -11,6 +11,7 @@ namespace dae
 	dae::Effect::Effect(ID3D11Device* pDevice, const std::wstring& assetFile)
 		: m_pEffect{ LoadEffect(pDevice, assetFile) }
 	{
+		//save technique
 		m_pTechnique = m_pEffect->GetTechniqueByName("DefaultTechnique");
 
 		if (!m_pTechnique->IsValid())
@@ -18,6 +19,7 @@ namespace dae
 			std::wcout << L"Technique not valid!\n";
 		}
 
+		//save world view matrices
 		m_pMatWorldViewProjVariable = m_pEffect->GetVariableByName("gWorldViewProj")->AsMatrix();
 
 		if (!m_pMatWorldViewProjVariable->IsValid())
@@ -39,6 +41,7 @@ namespace dae
 			std::wcout << L"m_pMatInverseViewMatrixVariable not valid!\n";
 		}
 
+		//save diffuse
 		m_pDiffuseMapVariable = m_pEffect->GetVariableByName("gDiffuseMap")->AsShaderResource();
 
 		if (!m_pDiffuseMapVariable->IsValid())
@@ -67,12 +70,16 @@ namespace dae
 		//	std::wcout << L"m_pGlossinessMapVariable not valid!\n";
 		//}
 
+		//save the sampler
+
 		m_pEffectSamplerVariable = m_pEffect->GetVariableByName("gSampler")->AsSampler();
 
 		if (!m_pEffectSamplerVariable->IsValid())
 		{
 			std::wcout << L"m_pEffectSamplerVariable not valid!\n";
 		}
+
+		//save the rasterizer state
 
 		m_pEffectRasterizerVariable = m_pEffect->GetVariableByName("gRasterizerState")->AsRasterizer();
 
@@ -81,6 +88,7 @@ namespace dae
 			std::wcout << L"m_pEffectRasterizerVariable not valid!\n";
 		}
 
+		//initialize sampler
 		m_SamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 		m_SamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 		m_SamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -91,7 +99,8 @@ namespace dae
 
 		m_SamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 		m_SamplerDesc.MaxAnisotropy = 16;
-		 
+
+		//intialize rasterizer state
 		m_RasterizerDesc.FillMode = D3D11_FILL_SOLID;
 		m_RasterizerDesc.FrontCounterClockwise = false;
 		m_RasterizerDesc.DepthBias = 0;
